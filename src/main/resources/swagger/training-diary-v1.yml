@@ -1,0 +1,417 @@
+openapi: 3.0.0
+info:
+  title: Training Diary API
+  description: API for recording gym workouts.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: 0610809824@uma.es
+
+paths:
+  /createUser:
+    post:
+      summary: Create a new user
+      description: This endpoint allows the creation of a new user in the system.
+      operationId: createUser
+      tags:
+        - User management
+      requestBody:
+        description: User data to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User successfully created.
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  summary: Invalid request error
+                  value:
+                    status: "400"
+                    error: "Bad Request"
+                    message: "There are fields that do not comply with the specified format."
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  summary: Not found
+                  value:
+                    status: "404"
+                    error: "Not found"
+                    message: "Resource not found."
+        '409':
+          description: Conflict.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                conflict:
+                  summary: There are conflicts in some data
+                  value:
+                    status: "409"
+                    error: "Conflict"
+                    message: "There are conflicts in some fields."
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Internal Server Error
+                  value:
+                    status: "500"
+                    error: "Internal Server Error"
+                    message: "Internal Server Error."
+
+  /createSessions:
+    post:
+      summary: Create a list of sessions, calculate the training volume and save it in the database and send an informative email
+      description: This endpoint allows the creation of a list of sessions for a microcycle in the system.
+      operationId: createSessions
+      tags:
+        - Session management
+      requestBody:
+        description: List of sessions to create, including the training variables.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Session'
+                destinationEmail:
+                  type: string
+                  description: Personal trainer email.
+                  example: 0610809824@uma.es
+              required:
+                - sessions
+                - destinationEmail
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReturnSession'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  summary: Invalid request error
+                  value:
+                    status: "400"
+                    error: "Bad Request"
+                    message: "There are fields that do not comply with the specified format."
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  summary: Not found
+                  value:
+                    status: "404"
+                    error: "Not found"
+                    message: "Resource not found."
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Internal Server Error
+                  value:
+                    status: "500"
+                    error: "Internal Server Error"
+                    message: "Internal Server Error."
+  /createExercises:
+    post:
+      summary: Create a list of exercises
+      description: This endpoint allows the creation of a list of exercises.
+      operationId: createExercises
+      tags:
+        - Exercise management
+      requestBody:
+        description: List of exercises to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exercises:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Exercise'
+              required:
+                - exercises
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exercises:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReturnExercise'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  summary: Invalid request error
+                  value:
+                    status: "400"
+                    error: "Bad Request"
+                    message: "There are fields that do not comply with the specified format."
+        '404':
+          description: Not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                badRequest:
+                  summary: Not found
+                  value:
+                    status: "404"
+                    error: "Not found"
+                    message: "Resource not found."
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Internal Server Error
+                  value:
+                    status: "500"
+                    error: "Internal Server Error"
+                    message: "Internal Server Error."
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: User's first name.
+          example: Juan
+        lastName:
+          type: string
+          description: User's last name.
+          example: Pérez
+        username:
+          type: string
+          description: Unique username.
+          example: juanperez
+        password:
+          type: string
+          description: User's password.
+          example: mySecurePass123
+        birthdate:
+          type: string
+          format: date
+          description: User's birth date.
+          example: '1990-05-25'
+          pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+        gender:
+          type: string
+          enum:
+            - Male
+            - Female
+            - Another
+          description: User's gender.
+          example: Male
+        email:
+          type: string
+          format: email
+          description: User's email address.
+          example: juan.perez@example.com
+        phoneNumber:
+          type: string
+          description: User's phone number.
+          example: '1234567890'
+      required:
+        - firstName
+        - lastName
+        - username
+        - password
+        - birthdate
+        - gender
+        - email
+      additionalProperties: false
+
+    Session:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Unique username.
+          example: juanperez
+        sessionId:
+          type: integer
+          description: Unique ID of the session.
+          example: 1
+        sessionName:
+          type: string
+          description: Name of the session.
+          example: "Session 1"
+        sessionDate:
+          type: string
+          format: date
+          description: Date of the session.
+          example: "2024-06-25"
+        training_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingVariable'
+      required:
+        - username
+        - sessionId
+        - sessionName
+      additionalProperties: false
+
+    ReturnSession:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          description: Unique ID of the session.
+          example: 1
+        status:
+          type: string
+          description: Session status.
+          example: "Session successfully created"
+      required:
+        - sessionId
+        - status
+
+    TrainingVariable:
+      type: object
+      properties:
+        setNumber:
+          type: integer
+          description: Set number of the training session.
+          example: 1
+        exerciseId:
+          type: integer
+          description: ID of the exercise performed in the set.
+          example: 1
+        weight:
+          type: number
+          format: float
+          description: Weight used in the set (in kilograms).
+          example: 20
+        repetitions:
+          type: integer
+          description: Number of repetitions performed in the set.
+          example: 10
+        rir:
+          type: integer
+          description: Repetitions in reserve (RIR).
+          example: 1
+      required:
+        - setNumber
+        - exerciseId
+        - weight
+        - repetitions
+      additionalProperties: false
+
+    Exercise:
+      type: object
+      properties:
+        exerciseId:
+          type: integer
+          description: Unique ID of the exercise.
+          example: 1
+        exerciseName:
+          type: string
+          description: Name of the exercise.
+          example: "Bench Press"
+      required:
+        - exerciseId
+        - exerciseName
+      additionalProperties: false
+
+    ReturnExercise:
+      type: object
+      properties:
+        exerciseId:
+          type: integer
+          description: Unique ID of the exercise.
+          example: 1
+        status:
+          type: string
+          description: Exercise status.
+          example: "Exercise successfully created"
+      required:
+        - exerciseId
+        - status
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          description: HTTP status code of the error.
+          example: "400"
+        error:
+          type: string
+          description: Description of the error type.
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message.
+          example: "Mandatory fields are missing or the data is invalid"
+      required:
+        - status
+        - error
