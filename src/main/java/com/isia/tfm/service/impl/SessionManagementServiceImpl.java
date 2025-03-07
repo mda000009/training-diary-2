@@ -13,6 +13,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -41,19 +42,28 @@ public class SessionManagementServiceImpl implements SessionManagementService {
         List<Session> filteredSessionList = filterSessionsCreated(createSessionsRequest.getSessions(), returnSessionList);
         log.debug("Saved training sessions");
 
-        try {
-            transactionHandlerService.saveTrainingVolume(filteredSessionList);
-            log.debug("Training volume for each exercise of each session saved");
-        } catch (Exception e) {
-            log.error("Training volume could not be calculated and saved");
-        }
+        // If the task fails, the flow continues. No global exception is thrown.
+        CompletableFuture<Void> saveTrainingVolumeFuture = CompletableFuture.runAsync(() -> {
+            try {
+                transactionHandlerService.saveTrainingVolume(filteredSessionList);
+                log.debug("Training volume for each exercise of each session saved");
+            } catch (Exception e) {
+                log.error("Training volume could not be calculated and saved", e);
+            }
+        });
 
-        try {
-            sendTrainingSessionEmail(createSessionsRequest.getDestinationEmail(), filteredSessionList);
-            log.debug("An email successfully sent for each saved training session");
-        } catch (Exception e) {
-            log.error("The information email could not be sent");
-        }
+        // If the task fails, the flow continues. No global exception is thrown.
+        CompletableFuture<Void> sendTrainingSessionEmailFuture = CompletableFuture.runAsync(() -> {
+            try {
+                sendTrainingSessionEmail(createSessionsRequest.getDestinationEmail(), filteredSessionList);
+                log.debug("An email successfully sent for each saved training session");
+            } catch (Exception e) {
+                log.error("The information email could not be sent", e);
+            }
+        });
+
+        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(saveTrainingVolumeFuture, sendTrainingSessionEmailFuture);
+        combinedFuture.join();
 
         CreateSessions201Response createSessions201Response = new CreateSessions201Response();
         createSessions201Response.setSessions(returnSessionList);
