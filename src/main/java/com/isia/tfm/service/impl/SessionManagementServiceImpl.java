@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -51,36 +52,51 @@ public class SessionManagementServiceImpl implements SessionManagementService {
         ReturnSession returnSession = transactionHandlerService.saveSession(session, exerciseEntityList);
         log.debug("Saved training session");
 
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
         if (calculateAndSaveTrainingVolume) {
-            try {
-                transactionHandlerService.saveTrainingVolume(session);
-                returnSession.getAdditionalInformation().setSavedTrainingVolume(TRUE_STRING);
-                log.debug("Training volume for all exercises saved");
-            } catch (Exception e) {
-                log.error("Training volume could not be calculated and saved");
-            }
+            futures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    transactionHandlerService.saveTrainingVolume(session);
+                    returnSession.getAdditionalInformation().setSavedTrainingVolume(TRUE_STRING);
+                    log.debug("Training volume for all exercises saved");
+                } catch (Exception e) {
+                    log.error("Training volume could not be calculated and saved", e);
+                }
+            }));
         }
+
         if (sendEmail && destinationEmail != null && !destinationEmail.isEmpty()) {
-            try {
-                sendTrainingSessionEmail(destinationEmail, session);
-                returnSession.getAdditionalInformation().setSentEmail(TRUE_STRING);
-                log.debug("Email successfully sent");
-            } catch (Exception e) {
-                log.error("Email could not be sent");
-            }
+            futures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    sendTrainingSessionEmail(destinationEmail, session);
+                    returnSession.getAdditionalInformation().setSentEmail(TRUE_STRING);
+                    log.debug("Email successfully sent");
+                } catch (Exception e) {
+                    log.error("Email could not be sent", e);
+                }
+            }));
         }
+
         if (saveExcel && excelFilePath != null && !excelFilePath.isEmpty()) {
-            try {
-                createExcelFile(session, exerciseEntityList, excelFilePath);
-                returnSession.getAdditionalInformation().setSavedExcel(TRUE_STRING);
-                log.debug("Excel saved");
-            } catch (Exception e) {
-                log.error("Excel not be saved");
-            }
+            futures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    createExcelFile(session, exerciseEntityList, excelFilePath);
+                    returnSession.getAdditionalInformation().setSavedExcel(TRUE_STRING);
+                    log.debug("Excel saved");
+                } catch (Exception e) {
+                    log.error("Excel not be saved", e);
+                }
+            }));
         }
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        allOf.join();
 
         return returnSession;
     }
+
 
     private List<ExerciseEntity> getExerciseToCreateList(Session session) {
         List<Integer> exerciseToCreateList = session.getTrainingVariables().stream()
